@@ -89,11 +89,14 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 # ──────────────────────────────
 # Banco de dados
-# SQLite localmente (não exige instalar nada extra no Windows), MySQL em
-# produção (é o banco disponibilizado pela hospedagem compartilhada).
+# Independente de DJANGO_PRODUCTION: em algumas hospedagens (ex.: o plano
+# grátis do PythonAnywhere) não tem MySQL disponível mesmo em produção, e
+# nesses casos o SQLite resolve — o disco lá é persistente, diferente de
+# hospedagens como Heroku. DB_ENGINE decide isso, PRODUCTION só controla
+# segurança/HTTPS.
 # ──────────────────────────────
 
-if PRODUCTION:
+if env("DB_ENGINE", default="sqlite") == "mysql":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.mysql",
