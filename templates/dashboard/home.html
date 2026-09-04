@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Painel{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-eyebrow">Bem-vindo(a)</div>
+    <h1 class="page-title">Olá, {{ request.user.first_name|default:request.user.username }}</h1>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-value">{{ upcoming_count }}</div>
+    <div class="kpi-label">Eventos reservados</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value">{{ available_this_month }}</div>
+    <div class="kpi-label">Dias disponíveis este mês</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value">{{ unread_total }}</div>
+    <div class="kpi-label">Mensagens não lidas</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value">{{ open_conversations_count }}</div>
+    <div class="kpi-label">Conversas ativas</div>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns:1.3fr 1fr; gap:24px;">
+  <div class="card">
+    <h3 style="margin-bottom:18px;">Próximos eventos</h3>
+    {% for b in upcoming_bookings %}
+    <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--cream);">
+      <div>
+        <strong>{{ b.date|date:"d/m/Y" }}</strong> — {{ b.client_name|default:"—" }}
+        <div style="font-size:0.78rem; color:var(--brown);">{{ b.get_event_type_display }}</div>
+      </div>
+      <a href="{% url 'bookings:update' b.pk %}" class="btn btn-outline btn-sm">Ver</a>
+    </div>
+    {% empty %}
+    <p style="color:var(--taupe);">Nenhum evento reservado no momento.</p>
+    {% endfor %}
+    <a href="{% url 'bookings:calendar' %}" class="btn btn-outline" style="margin-top:16px;">Ver calendário completo</a>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-bottom:18px;">Mensagens recentes</h3>
+    {% for m in recent_messages %}
+    <div style="padding:10px 0; border-bottom:1px solid var(--cream);">
+      <strong>{{ m.conversation.contact.name|default:m.conversation.contact.phone_number }}</strong>
+      <div style="font-size:0.82rem; color:var(--brown); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ m.body }}</div>
+    </div>
+    {% empty %}
+    <p style="color:var(--taupe);">Nenhuma mensagem recebida ainda.</p>
+    {% endfor %}
+    <a href="{% url 'whatsapp_chat:inbox' %}" class="btn btn-outline" style="margin-top:16px;">Abrir WhatsApp</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}WhatsApp{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-eyebrow">Atendimento</div>
+    <h1 class="page-title">WhatsApp</h1>
+  </div>
+</div>
+
+{% csrf_token %}
+<div class="chat-layout"
+     data-conversations-url="{% url 'whatsapp_chat:api_conversations' %}"
+     data-selected-id="{{ selected.id|default:'' }}">
+  <div class="chat-sidebar" id="conversationList">
+    {% for c in conversations %}
+    <a class="conversation-item {% if selected and selected.id == c.id %}active{% endif %}"
+       href="{% url 'whatsapp_chat:inbox_conversation' c.id %}">
+      <div class="conv-top">
+        <span class="conv-name">{{ c.contact.name|default:c.contact.phone_number }}</span>
+        <span class="conv-time">{{ c.last_message_at|date:"d/m H:i" }}</span>
+      </div>
+      <div class="conv-preview">
+        {% with last=c.messages.last %}{{ last.body|default:"" }}{% endwith %}
+      </div>
+      {% if c.unread_count %}<span class="conv-unread">{{ c.unread_count }}</span>{% endif %}
+    </a>
+    {% empty %}
+    <div style="padding:20px; color:var(--taupe); font-size:0.85rem;">Nenhuma conversa ainda.</div>
+    {% endfor %}
+  </div>
+
+  <div class="chat-thread">
+    {% if selected %}
+    <div class="chat-thread-header">
+      <strong>{{ selected.contact.name|default:selected.contact.phone_number }}</strong>
+      <div style="font-size:0.78rem; color:var(--taupe);">{{ selected.contact.phone_number }}</div>
+    </div>
+    <div class="chat-messages" id="chatMessages" data-messages-url="{% url 'whatsapp_chat:api_messages' selected.id %}">
+      {% for m in chat_messages %}
+      <div class="bubble bubble-{{ m.direction|lower }}" data-id="{{ m.id }}">
+        {{ m.body }}
+        <span class="bubble-time">{{ m.timestamp|date:"d/m H:i" }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div id="composerError" class="alert alert-error" style="display:none; margin:0 22px 12px;"></div>
+    <form class="chat-composer" id="composerForm" data-send-url="{% url 'whatsapp_chat:api_send' selected.id %}">
+      <textarea id="composerText" rows="1" placeholder="Digite uma mensagem..."></textarea>
+      <button type="submit" class="btn btn-primary">Enviar</button>
+    </form>
+    {% else %}
+    <div class="chat-empty">Selecione uma conversa para começar a atender.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_body %}
+<script>
+(function () {
+  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  const chatLayout = document.querySelector('.chat-layout');
+  const conversationsUrl = chatLayout.dataset.conversationsUrl;
+  const selectedId = chatLayout.dataset.selectedId;
+  const chatMessagesEl = document.getElementById('chatMessages');
+  const composerForm = document.getElementById('composerForm');
+
+  let lastMessageId = 0;
+  if (chatMessagesEl) {
+    const bubbles = chatMessagesEl.querySelectorAll('.bubble');
+    if (bubbles.length) {
+      lastMessageId = bubbles[bubbles.length - 1].dataset.id;
+      chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+    }
+    // Marca como lida ao abrir.
+    fetch(`/whatsapp/api/conversations/${selectedId}/read/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrfToken },
+    });
+  }
+
+  function pollMessages() {
+    if (!chatMessagesEl) return;
+    const url = chatMessagesEl.dataset.messagesUrl + `?after_id=${lastMessageId}`;
+    fetch(url).then(r => r.json()).then(data => {
+      if (!data.messages || !data.messages.length) return;
+      data.messages.forEach(m => {
+        const div = document.createElement('div');
+        div.className = `bubble bubble-${m.direction.toLowerCase()}`;
+        div.dataset.id = m.id;
+        div.innerHTML = `${escapeHtml(m.body)}<span class="bubble-time">${formatTime(m.timestamp)}</span>`;
+        chatMessagesEl.appendChild(div);
+        lastMessageId = m.id;
+      });
+      chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+    });
+  }
+
+  function pollConversations() {
+    fetch(conversationsUrl).then(r => r.json()).then(data => {
+      // Atualização simples: se a lista mudou, recarrega a sidebar.
+      // (mantém a implementação enxuta — uma otimização incremental fica
+      // fácil de adicionar depois, se necessário)
+      const badge = document.querySelector('.sidebar-badge');
+      const total = data.conversations.reduce((sum, c) => sum + c.unread_count, 0);
+      if (badge) badge.textContent = total || '';
+    });
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function formatTime(iso) {
+    const d = new Date(iso);
+    return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
+
+  const composerError = document.getElementById('composerError');
+  if (composerForm) {
+    composerForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const textarea = document.getElementById('composerText');
+      const body = textarea.value.trim();
+      if (!body) return;
+      composerError.style.display = 'none';
+      fetch(composerForm.dataset.sendUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ body: body }),
+      }).then(r => r.json()).then(data => {
+        if (data.error) {
+          composerError.textContent = 'Não foi possível enviar a mensagem. Verifique a conexão com o WhatsApp e tente novamente.';
+          composerError.style.display = 'block';
+          return;
+        }
+        textarea.value = '';
+        pollMessages();
+      });
+    });
+  }
+
+  // Polling: 4s para a conversa aberta, 6s para a lista de conversas.
+  // Pausa quando a aba está em segundo plano para economizar recursos do
+  // servidor (importante em hospedagem compartilhada).
+  let messagesInterval, conversationsInterval;
+  function startPolling() {
+    messagesInterval = setInterval(pollMessages, 4000);
+    conversationsInterval = setInterval(pollConversations, 6000);
+  }
+  function stopPolling() {
+    clearInterval(messagesInterval);
+    clearInterval(conversationsInterval);
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) stopPolling(); else startPolling();
+  });
+  startPolling();
+})();
+</script>
+{% endblock %}

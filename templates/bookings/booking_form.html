@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Data de Evento{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-eyebrow">Agenda</div>
+    <h1 class="page-title">{% if object %}Editar data{% else %}Nova data{% endif %}</h1>
+  </div>
+</div>
+
+<div class="card" style="max-width:560px;">
+  <form method="post">
+    {% csrf_token %}
+    {% for field in form %}
+    <div class="form-group">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
+      {% for error in field.errors %}<div class="form-errors">{{ error }}</div>{% endfor %}
+    </div>
+    {% endfor %}
+    <div style="display:flex; gap:10px; justify-content:space-between;">
+      <div style="display:flex; gap:10px;">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        <a href="{% url 'bookings:calendar' %}" class="btn btn-outline">Cancelar</a>
+      </div>
+      {% if object and request.user.is_admin %}
+      <a href="{% url 'bookings:delete' object.pk %}" class="btn btn-danger">Excluir</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

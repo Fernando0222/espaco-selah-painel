@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Usuários{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-eyebrow">Administração</div>
+    <h1 class="page-title">Usuários</h1>
+  </div>
+  <a href="{% url 'accounts:user_create' %}" class="btn btn-primary">Novo usuário</a>
+</div>
+
+<div class="card">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Usuário</th>
+        <th>Função</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.get_full_name|default:"—" }}</td>
+        <td>{{ u.username }}</td>
+        <td>{{ u.get_role_display }}</td>
+        <td>{% if u.is_active %}<span class="tag tag-disponivel">Ativo</span>{% else %}<span class="tag tag-bloqueada">Inativo</span>{% endif %}</td>
+        <td style="text-align:right; display:flex; gap:8px; justify-content:flex-end;">
+          <a href="{% url 'accounts:user_update' u.pk %}" class="btn btn-outline btn-sm">Editar</a>
+          {% if u != request.user %}
+          <form method="post" action="{% url 'accounts:user_toggle_active' u.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm {% if u.is_active %}btn-danger{% else %}btn-outline{% endif %}">
+              {% if u.is_active %}Desativar{% else %}Ativar{% endif %}
+            </button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5">Nenhum usuário cadastrado ainda.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

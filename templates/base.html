@@ -1,0 +1,54 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Painel{% endblock %} · Espaço Selah</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/theme.css' %}">
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="sidebar-logo">Espaço <span>Selah</span></div>
+    <nav class="sidebar-nav">
+      <a href="{% url 'dashboard:home' %}" class="sidebar-link {% if request.resolver_match.namespace == 'dashboard' %}active{% endif %}">Painel</a>
+      <a href="{% url 'bookings:calendar' %}" class="sidebar-link {% if request.resolver_match.namespace == 'bookings' %}active{% endif %}">Datas de Eventos</a>
+      <a href="{% url 'whatsapp_chat:inbox' %}" class="sidebar-link {% if request.resolver_match.namespace == 'whatsapp_chat' %}active{% endif %}">
+        WhatsApp
+        {% if unread_messages_total %}<span class="sidebar-badge">{{ unread_messages_total }}</span>{% endif %}
+      </a>
+      {% if user.is_admin %}
+      <a href="{% url 'accounts:user_list' %}" class="sidebar-link {% if request.resolver_match.namespace == 'accounts' %}active{% endif %}">Usuários</a>
+      {% endif %}
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <strong>{{ user.get_full_name|default:user.username }}</strong>
+        {{ user.get_role_display }}
+      </div>
+      <a href="{% url 'accounts:password_change' %}" class="sidebar-logout" style="display:block;margin-bottom:8px;">Trocar senha</a>
+      <form method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="sidebar-logout" style="background:none;border:none;cursor:pointer;">Sair</button>
+      </form>
+    </div>
+  </aside>
+
+  <main class="main">
+    {% if messages %}
+    <div class="messages">
+      {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% block extra_body %}{% endblock %}
+</body>
+</html>

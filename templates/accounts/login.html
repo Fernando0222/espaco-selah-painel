@@ -1,0 +1,44 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entrar · Espaço Selah</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/theme.css' %}">
+</head>
+<body>
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">Espaço <span>Selah</span></div>
+    <div class="auth-subtitle">Painel Administrativo</div>
+
+    {% if form.non_field_errors %}
+    <div class="messages">
+      {% for error in form.non_field_errors %}
+      <div class="alert alert-error">{{ error }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="id_username">Usuário</label>
+        {{ form.username }}
+      </div>
+      <div class="form-group">
+        <label for="id_password">Senha</label>
+        {{ form.password }}
+      </div>
+      <button type="submit" class="btn btn-primary">Entrar</button>
+    </form>
+    <div style="text-align:center; margin-top:18px;">
+      <a href="{% url 'accounts:password_reset' %}" style="font-size:0.8rem; color:var(--brown);">Esqueci minha senha</a>
+    </div>
+  </div>
+</div>
+</body>
+</html>

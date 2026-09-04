@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Datas de Eventos{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-eyebrow">Agenda</div>
+    <h1 class="page-title">Datas de Eventos</h1>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="{% url 'bookings:list' %}" class="btn btn-outline">Ver lista</a>
+    <a href="{% url 'bookings:create' %}" class="btn btn-primary">Nova data</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="calendar-nav">
+    <a href="{% url 'bookings:calendar_month' prev_year prev_month %}">&larr; Mês anterior</a>
+    <h2>{{ current_month|date:"F \d\e Y" }}</h2>
+    <a href="{% url 'bookings:calendar_month' next_year next_month %}">Próximo mês &rarr;</a>
+  </div>
+
+  <div class="calendar-grid">
+    {% for label in weekday_labels %}
+    <div class="calendar-weekday">{{ label }}</div>
+    {% endfor %}
+
+    {% for week in weeks %}
+      {% for cell in week %}
+        {% if cell.in_month %}
+        <div class="calendar-day {% if cell.is_today %}today{% endif %} {% if cell.booking %}status-{{ cell.booking.status|lower }}{% endif %}">
+          {% if cell.booking %}
+          <a href="{% url 'bookings:update' cell.booking.pk %}">
+            <span class="day-num">{{ cell.date.day }}</span>
+            <span class="tag tag-{{ cell.booking.status|lower }}">{{ cell.booking.get_status_display }}</span>
+            {% if cell.booking.client_name %}<span class="event-label">{{ cell.booking.client_name }}</span>{% endif %}
+          </a>
+          {% else %}
+          <a href="{% url 'bookings:create' %}?date={{ cell.date|date:'Y-m-d' }}">
+            <span class="day-num">{{ cell.date.day }}</span>
+          </a>
+          {% endif %}
+        </div>
+        {% else %}
+        <div class="calendar-day empty"></div>
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
